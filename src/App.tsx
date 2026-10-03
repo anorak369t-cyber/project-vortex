@@ -93,7 +93,7 @@ function Estimator(){const [type,setType]=useState('website'),[selected,setSelec
 function AI(){
  const [messages,setMessages]=useState<{role:'ai'|'user';text:string}[]>([{role:'ai',text:'Hi, I’m Vortex AI. Tell me what you want to build, automate, or understand.'}]);
  const [input,setInput]=useState('');
- const [voice,setVoice]=useState(false);
+
  const [focus,setFocus]=useState<'chat'|'voice'>('chat');
  function send(){const q=input.trim();if(!q)return;const l=q.toLowerCase();let r='I can help turn that into a clear Vortex project, workflow, or product brief.';if(l.includes('ai'))r='Vortex AI is designed as a private copilot layer that can grow into secure tools, workflows and business intelligence.';if(l.includes('business')||l.includes('service'))r='Vortex Dynamics brings software, AI, cloud, cybersecurity, UI/UX and digital transformation into one connected technology platform.';setMessages(m=>m.concat([{role:'user',text:q},{role:'ai',text:r}]));setInput('')}
  return <div className="ai-product">
@@ -104,12 +104,12 @@ function AI(){
       <div className="ai-chat-intro"><div className="ai-orb"><Sparkles size={25}/></div><span className="eyebrow">VORTEX AI</span><h1>What can I help<br/>you <em>create?</em></h1><p>Ideas, products, workflows and answers — in one conversation.</p></div>
       <div className="ai-chat-stream">{messages.slice(-4).map((m,i)=><div className={'ai-bubble '+m.role} key={i}><span className="ai-bubble-icon">{m.role==='ai'?<Sparkles size={12}/>:<Users size={12}/>}</span><p>{m.text}</p></div>)}</div>
       <div className="ai-suggestions"><button onClick={()=>setInput('Help me shape a new product idea')}>New product <ArrowRight size={12}/></button><button onClick={()=>setInput('How can AI help my business?')}>AI for business <ArrowRight size={12}/></button></div>
-      <div className="ai-input"><button onClick={()=>setVoice(true)} className="round-control">+</button><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask Vortex anything…" /><button onClick={send} className="send-control"><Send size={15}/></button></div>
+      <div className="ai-input"><button onClick={()=>setFocus('voice')} className="round-control">+</button><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask Vortex anything…" /><button onClick={send} className="send-control"><Send size={15}/></button></div>
       <div className="home-indicator"/>
     </div>:<div className="ai-voice">
       <div className="voice-caption"><span className="eyebrow">VORTEX AI • VOICE</span><h1>I'm listening.</h1><p>Speak naturally. I’ll turn your thought into the next step.</p></div>
       <div className="voice-orb"><div/><div/><div/><Sparkles size={34}/></div>
-      <div className="voice-controls"><button className="round-control">Aa</button><button className="voice-button" onClick={()=>setVoice(false)}><Bot size={23}/></button><button className="round-control">×</button></div>
+      <div className="voice-controls"><button className="round-control">Aa</button><button className="voice-button" onClick={()=>setFocus('chat')}><Bot size={23}/></button><button className="round-control">×</button></div>
       <div className="home-indicator"/>
     </div>}
    </div>
