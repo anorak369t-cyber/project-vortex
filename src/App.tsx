@@ -104,23 +104,88 @@ function AI(){
    setInput('');
    setThinking(true);
    const controller=new AbortController();
-   const timeout=window.setTimeout(()=>controller.abort(),45000);
+   const timeout=window.setTimeout(()=>controller.abort(),60000);
+
    try{
-     const response=await fetch('/api/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history}),signal:controller.signal});
-     const raw=await response.text();
-     let data:{text?:string;error?:string}={};
-     try{data=JSON.parse(raw)}catch{data={error:'The AI service returned an invalid response.'}}
-     if(!response.ok)throw new Error(data.error||('AI service error ('+response.status+')'));
-     setMessages(m=>m.concat([{role:'ai',text:data.text||'I could not generate a response.'}]));
+     const response=await fetch('/api/assistant',{
+       method:'POST',
+       headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({message:q,history}),
+       signal:controller.signal
+     });
+
+     if(!response.ok) {
+       const raw=await response.text();
+       let data:{error?:string}={};
+       try{data=JSON.parse(raw)}catch{}
+       throw new Error(data.error||'Vortex AI could not complete that request.');
+     }
+
+     if(!response.body) throw new Error('Vortex AI returned no response stream.');
+
+     const reader=response.body.getReader();
+     const decoder=new TextDecoder();
+     let buffer='';
+     let answer='';
+     let completed=false;
+
+     setMessages(m=>m.concat([{role:'ai',text:''}]));
+
+     const consume=(chunk:string)=>{
+       buffer+=chunk;
+       const events=buffer.split('\n\n');
+       buffer=events.pop()||'';
+       for(const event of events){
+         const line=event.split('\n').find(item=>item.startsWith('data: '));
+         if(!line)continue;
+         try{
+           const payload=JSON.parse(line.slice(6)) as {type?:string;text?:string;error?:string};
+           if(payload.type==='chunk'&&payload.text){
+             answer+=payload.text;
+             setMessages(m=>{
+               const next=[...m];
+               const last=next.length-1;
+               if(last>=0&&next[last].role==='ai')next[last]={role:'ai',text:answer};
+               return next;
+             });
+           }
+           if(payload.type==='error'){
+             completed=true;
+             throw new Error(payload.error||'Vortex AI could not complete that request.');
+           }
+           if(payload.type==='done')completed=true;
+         }catch(error){
+           if(error instanceof Error&&error.message!=='Unexpected end of JSON input')throw error;
+         }
+       }
+     };
+
+     while(true){
+       const {value,done}=await reader.read();
+       if(done)break;
+       consume(decoder.decode(value,{stream:true}));
+     }
+     consume(decoder.decode());
+
+     if(!completed&&!answer)throw new Error('Vortex AI ended without a response.');
    }catch(error){
-     const detail=error instanceof DOMException&&error.name==='AbortError'?'Vortex AI took too long to respond. Please try again.':error instanceof Error?error.message:'The assistant request failed.';
-     setMessages(m=>m.concat([{role:'ai',text:detail}]));
+     const detail=error instanceof DOMException&&error.name==='AbortError'
+       ?'Vortex AI is taking longer than expected. Please try again.'
+       :error instanceof Error?error.message:'Vortex AI could not complete that request.';
+     setMessages(m=>{
+       const next=[...m];
+       const last=next.length-1;
+       if(last>=0&&next[last].role==='ai'&&next[last].text==='')next[last]={role:'ai',text:detail};
+       else next.push({role:'ai',text:detail});
+       return next;
+     });
      console.error(error);
    }finally{
      window.clearTimeout(timeout);
      setThinking(false);
    }
  }
+
  return <div className="ai-product">
    <div className="ai-aurora aurora-one"/><div className="ai-aurora aurora-two"/><div className="ai-aurora aurora-three"/>
    <div className="ai-product-top"><button className="ai-back" onClick={()=>setFocus('chat')}><ChevronRight size={18}/></button><div className="ai-title"><b>Vortex AI</b><small><span className={'dot '+(thinking?'thinking-dot':'')}/>{thinking?'Thinking…':'Ready to help'}</small></div><button className="ai-plus">✦</button></div>
@@ -128,7 +193,7 @@ function AI(){
     {focus==='chat'?<div className="ai-phone-chat">
       <div className="ai-chat-intro"><div className={'ai-orb '+(thinking?'orb-thinking':'')}><Sparkles size={25}/></div><span className="eyebrow">VORTEX AI</span><h1>What can I help<br/>you <em>create?</em></h1><p>Ideas, products, workflows and answers — in one conversation.</p></div>
       <div className="ai-chat-stream">
-       {messages.slice(-4).map((m,i)=><div className={'ai-bubble '+m.role} key={i}><span className="ai-bubble-icon">{m.role==='ai'?<Sparkles size={12}/>:<Users size={12}/>}</span><p>{m.text}</p></div>)}
+       {messages.slice(-4).map((m,i)=><div className={'ai-bubble '+m.role} key={i}><span className="ai-bubble-icon">{m.role==='ai'?<Sparkles size={12}/>:<Users size={12}/>}</span><p>{m.text||' '}</p></div>)}
        {thinking&&<div className="ai-bubble ai thinking-bubble"><span className="ai-bubble-icon"><Sparkles size={12}/></span><p className="thinking-text"><span/> <span/> <span/> <b>Thinking</b></p></div>}
       </div>
       <div className="ai-suggestions"><button onClick={()=>setInput('Help me shape a new product idea')} disabled={thinking}>New product <ArrowRight size={12}/></button><button onClick={()=>setInput('How can AI help my business?')} disabled={thinking}>AI for business <ArrowRight size={12}/></button></div>
