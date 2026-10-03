@@ -37,41 +37,59 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  if (!process.env.GEMINI_API_KEY) {
-    res.status(503).json({ error: "Vortex AI is not configured. Add GEMINI_API_KEY to the server environment." });
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    res.status(503).json({ error: "Vortex AI is not configured. Add GEMINI_API_KEY in Vercel environment variables, then redeploy." });
     return;
   }
 
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      res.status(503).json({ error: "Vortex AI is not configured. Add GEMINI_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy." });
-      return;
+  const ai = new GoogleGenAI({ apiKey });
+  const contents = Array.isArray(history)
+    ? history.slice(-8).filter((item: any) => item && typeof item.text === "string" && item.text.trim()).map((item: any) => ({
+        role: item.role === "model" ? "model" : "user",
+        parts: [{ text: item.text.trim().slice(0, 4000) }]
+      }))
+    : [];
+
+  contents.push({ role: "user", parts: [{ text: message.trim().slice(0, 4000) }] });
+
+  const primaryModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const fallbackModels = [primaryModel, "gemini-3.7-flash", "gemini-3.5-flash-lite"].filter((model, index, list) => list.indexOf(model) === index);
+
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const isTransient = (error: unknown) => {
+    const text = error instanceof Error ? error.message : String(error);
+    return /503|UNAVAILABLE|high demand|overloaded|temporarily|deadline|429|RESOURCE_EXHAUSTED/i.test(text);
+  };
+
+  let lastError: unknown = null;
+
+  for (const model of fallbackModels) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: { systemInstruction }
+        });
+
+        res.status(200).json({ text: response.text || "I couldn't generate a response." });
+        return;
+      } catch (error) {
+        lastError = error;
+        console.error(`Vortex AI error — model=${model}, attempt=${attempt + 1}`, error);
+
+        if (!isTransient(error) || attempt === 1) break;
+        await sleep(700 * Math.pow(2, attempt));
+      }
     }
-
-    const ai = new GoogleGenAI({ apiKey });
-    const contents = Array.isArray(history)
-      ? history.slice(-8).filter((item: any) => item && typeof item.text === "string" && item.text.trim()).map((item: any) => ({
-          role: item.role === "model" ? "model" : "user",
-          parts: [{ text: item.text.trim().slice(0, 4000) }]
-        }))
-      : [];
-
-    contents.push({
-      role: "user",
-      parts: [{ text: message.trim().slice(0, 4000) }]
-    });
-
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
-      contents,
-      config: { systemInstruction }
-    });
-
-    res.status(200).json({ text: response.text || "I couldn't generate a response." });
-  } catch (error) {
-    console.error("Vortex AI error:", error);
-    const message = error instanceof Error ? error.message : "Unknown Gemini API error";
-    res.status(502).json({ error: `Vortex AI could not complete the request: ${message.slice(0, 300)}` });
   }
+
+  const raw = lastError instanceof Error ? lastError.message : String(lastError);
+  if (/503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED/i.test(raw)) {
+    res.status(503).json({ error: "Vortex AI is temporarily busy. I tried the available AI routes, but they are currently at capacity. Please try again in a moment." });
+    return;
+  }
+
+  res.status(502).json({ error: `Vortex AI could not complete the request: ${raw.slice(0, 240)}` });
 }
