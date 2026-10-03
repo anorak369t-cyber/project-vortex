@@ -93,18 +93,46 @@ function Estimator(){const [type,setType]=useState('website'),[selected,setSelec
 function AI(){
  const [messages,setMessages]=useState<{role:'ai'|'user';text:string}[]>([{role:'ai',text:'Hi, I’m Vortex AI. Tell me what you want to build, automate, or understand.'}]);
  const [input,setInput]=useState('');
-
  const [focus,setFocus]=useState<'chat'|'voice'>('chat');
- async function send(){const q=input.trim();if(!q)return;setMessages(m=>m.concat([{role:'user',text:q}]));setInput('');try{const history=messages.slice(-8).map(m=>({role:m.role==='ai'?'model':'user',text:m.text}));const response=await fetch('/api/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Assistant request failed');setMessages(m=>m.concat([{role:'ai',text:data.text||'I could not generate a response.'}]))}catch(error){const detail=error instanceof Error?error.message:'The assistant request failed.';setMessages(m=>m.concat([{role:'ai',text:detail}]));console.error(error)}}
+ const [thinking,setThinking]=useState(false);
+
+ async function send(){
+   const q=input.trim();
+   if(!q||thinking)return;
+   const history=messages.slice(-8).map(m=>({role:m.role==='ai'?'model':'user',text:m.text}));
+   setMessages(m=>m.concat([{role:'user',text:q}]));
+   setInput('');
+   setThinking(true);
+   const controller=new AbortController();
+   const timeout=window.setTimeout(()=>controller.abort(),45000);
+   try{
+     const response=await fetch('/api/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history}),signal:controller.signal});
+     const raw=await response.text();
+     let data:{text?:string;error?:string}={};
+     try{data=JSON.parse(raw)}catch{data={error:'The AI service returned an invalid response.'}}
+     if(!response.ok)throw new Error(data.error||('AI service error ('+response.status+')'));
+     setMessages(m=>m.concat([{role:'ai',text:data.text||'I could not generate a response.'}]));
+   }catch(error){
+     const detail=error instanceof DOMException&&error.name==='AbortError'?'Vortex AI took too long to respond. Please try again.':error instanceof Error?error.message:'The assistant request failed.';
+     setMessages(m=>m.concat([{role:'ai',text:detail}]));
+     console.error(error);
+   }finally{
+     window.clearTimeout(timeout);
+     setThinking(false);
+   }
+ }
  return <div className="ai-product">
    <div className="ai-aurora aurora-one"/><div className="ai-aurora aurora-two"/><div className="ai-aurora aurora-three"/>
-   <div className="ai-product-top"><button className="ai-back" onClick={()=>setFocus('chat')}><ChevronRight size={18}/></button><div className="ai-title"><b>Vortex AI</b><small><span className="dot"/> Ready to help</small></div><button className="ai-plus">✦</button></div>
+   <div className="ai-product-top"><button className="ai-back" onClick={()=>setFocus('chat')}><ChevronRight size={18}/></button><div className="ai-title"><b>Vortex AI</b><small><span className={'dot '+(thinking?'thinking-dot':'')}/>{thinking?'Thinking…':'Ready to help'}</small></div><button className="ai-plus">✦</button></div>
    <div className="ai-product-stage">
     {focus==='chat'?<div className="ai-phone-chat">
-      <div className="ai-chat-intro"><div className="ai-orb"><Sparkles size={25}/></div><span className="eyebrow">VORTEX AI</span><h1>What can I help<br/>you <em>create?</em></h1><p>Ideas, products, workflows and answers — in one conversation.</p></div>
-      <div className="ai-chat-stream">{messages.slice(-4).map((m,i)=><div className={'ai-bubble '+m.role} key={i}><span className="ai-bubble-icon">{m.role==='ai'?<Sparkles size={12}/>:<Users size={12}/>}</span><p>{m.text}</p></div>)}</div>
-      <div className="ai-suggestions"><button onClick={()=>setInput('Help me shape a new product idea')}>New product <ArrowRight size={12}/></button><button onClick={()=>setInput('How can AI help my business?')}>AI for business <ArrowRight size={12}/></button></div>
-      <div className="ai-input"><button onClick={()=>setFocus('voice')} className="round-control">+</button><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask Vortex anything…" /><button onClick={send} className="send-control"><Send size={15}/></button></div>
+      <div className="ai-chat-intro"><div className={'ai-orb '+(thinking?'orb-thinking':'')}><Sparkles size={25}/></div><span className="eyebrow">VORTEX AI</span><h1>What can I help<br/>you <em>create?</em></h1><p>Ideas, products, workflows and answers — in one conversation.</p></div>
+      <div className="ai-chat-stream">
+       {messages.slice(-4).map((m,i)=><div className={'ai-bubble '+m.role} key={i}><span className="ai-bubble-icon">{m.role==='ai'?<Sparkles size={12}/>:<Users size={12}/>}</span><p>{m.text}</p></div>)}
+       {thinking&&<div className="ai-bubble ai thinking-bubble"><span className="ai-bubble-icon"><Sparkles size={12}/></span><p className="thinking-text"><span/> <span/> <span/> <b>Thinking</b></p></div>}
+      </div>
+      <div className="ai-suggestions"><button onClick={()=>setInput('Help me shape a new product idea')} disabled={thinking}>New product <ArrowRight size={12}/></button><button onClick={()=>setInput('How can AI help my business?')} disabled={thinking}>AI for business <ArrowRight size={12}/></button></div>
+      <div className="ai-input"><button onClick={()=>setFocus('voice')} className="round-control" disabled={thinking}>+</button><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder={thinking?'Vortex AI is thinking…':'Ask Vortex anything…'} disabled={thinking}/><button onClick={send} className="send-control" disabled={thinking||!input.trim()}><Send size={15}/></button></div>
       <div className="home-indicator"/>
     </div>:<div className="ai-voice">
       <div className="voice-caption"><span className="eyebrow">VORTEX AI • VOICE</span><h1>I'm listening.</h1><p>Speak naturally. I’ll turn your thought into the next step.</p></div>
