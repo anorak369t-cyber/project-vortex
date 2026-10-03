@@ -1,27 +1,10 @@
 import React, {useState} from 'react';
+import {services,packages,projects,estimator,addons,activity as activityData} from './data.js';
 import {createRoot} from 'react-dom/client';
 import {Activity,ArrowRight,BarChart3,Bot,BriefcaseBusiness,Check,ChevronRight,Cloud,Code2,Cpu,Globe2,Layers3,Menu,MessageSquare,Network,PanelLeft,Rocket,Send,ShieldCheck,Sparkles,Users,X,Zap} from 'lucide-react';
 
-const services=[
- ['Custom Software',Code2,'Secure, scalable web platforms and business systems built around real workflows.'],
- ['AI & Intelligent Workflows',Bot,'Copilots, automation, analytics and AI-ready products designed for practical use.'],
- ['Cloud & SaaS',Cloud,'Modern cloud applications, integrations, digital records and subscription products.'],
- ['Cybersecurity',ShieldCheck,'Security-minded architecture, awareness and resilient digital infrastructure.'],
- ['UI/UX & Product Design',Layers3,'Premium interfaces that turn complex technology into clear user experiences.'],
- ['Digital Transformation',Network,'Technology strategy and workflow modernization for organizations and SMEs.']
-];
-const projects=[
- ['Vortex AI Copilot','AI platform','Prototype','Workflow intelligence'],
- ['Vortex OS','Operations','Active concept','Unified command center'],
- ['AI Study Assistant','EdTech','Product concept','Ugandan learner focus'],
- ['Vortex Commerce','SME SaaS','Roadmap','Digital business tools']
-];
-const activity=[
- ['09:42','AI workspace synced','Vortex AI','live'],
- ['09:18','New product brief created','Vortex OS','new'],
- ['08:56','Analytics pipeline checked','Data layer','ok'],
- ['08:31','Security baseline reviewed','Cybersecurity','ok']
-];
+const serviceIcons={ 'Custom Software':Code2,'AI & Intelligent Workflows':Bot,'Cloud & SaaS':Cloud,'Cybersecurity':ShieldCheck,'UI/UX & Product Design':Layers3,'Digital Transformation':Network };
+const activity=activityData;
 
 function Glass({children,className}){return <div className={'glass '+(className||'')}>{children}</div>}
 function Brand(){return <div className="brand"><span className="mark"><i/></span><span><b>VORTEX</b><em>DYNAMICS</em></span></div>}
@@ -44,7 +27,7 @@ function Marketing({openOS,openAI}){
   </section>
 
   <section className="section wrap" id="services"><div className="section-head"><div><span className="eyebrow">CAPABILITIES</span><h2>One technology partner. Multiple layers of impact.</h2></div><p>Design, engineering, AI and infrastructure brought into one coherent system.</p></div>
-   <div className="service-grid">{services.map(([title,Icon,text])=><Glass className="service" key={title}><div className="icon"><Icon size={19}/></div><h3>{title}</h3><p>{text}</p><ChevronRight className="arrow" size={16}/></Glass>)}</div>
+   <div className="service-grid">{services.map(({title,text})=>{const Icon=serviceIcons[title];return <Glass className="service" key={title}><div className="icon"><Icon size={19}/></div><h3>{title}</h3><p>{text}</p><ChevronRight className="arrow" size={16}/></Glass>)}</div>
   </section>
 
   <section className="section band" id="ecosystem"><div className="wrap"><div className="section-head"><div><span className="eyebrow">PRODUCT ECOSYSTEM</span><h2>Designed as a connected Vortex universe.</h2></div><button className="text-btn" onClick={openOS}>Explore the OS <ArrowRight size={15}/></button></div>
@@ -58,7 +41,7 @@ function Marketing({openOS,openAI}){
 }
 
 function Sidebar({view,setView}){
- const items=[['overview','Overview',PanelLeft],['projects','Projects',BriefcaseBusiness],['analytics','Analytics',BarChart3],['ai','Vortex AI',Bot],['activity','Activity',Activity]];
+ const items=[['overview','Overview',PanelLeft],['projects','Projects',BriefcaseBusiness],['analytics','Analytics',BarChart3],['ai','Vortex AI',Bot],['activity','Activity',Activity],['estimator','Estimator',BarChart3]];
  return <aside className="sidebar"><Brand/><nav>{items.map(([id,label,Icon])=><button key={id} className={view===id?'active':''} onClick={()=>setView(id)}><Icon size={17}/>{label}</button>)}</nav><div className="side-bottom"><div><span className="dot"/> <b>Core systems</b><small>Operational</small></div><small>VORTEX OS • 0.1</small></div></aside>
 }
 
@@ -78,6 +61,7 @@ function Analytics(){return <div className="dash"><div className="dash-title"><d
 
 function ActivityPage(){return <div className="dash"><div className="dash-title"><div><span className="eyebrow">AUDIT STREAM</span><h1>Activity</h1><p>Recent events across the Vortex ecosystem.</p></div></div><Glass className="activity full">{activity.concat([['08:02','Project architecture updated','Platform','new'],['07:46','Security scan completed','Cybersecurity','ok']]).map(([t,title,src,s])=><div className="activity-row" key={t+title}><time>{t}</time><i className={'activity-dot '+s}/><p><b>{title}</b><small>{src}</small></p><b className="tag">{s.toUpperCase()}</b></div>)}</Glass></div>}
 
+function Estimator(){const [type,setType]=useState('website'),[selected,setSelected]=useState(['responsive','seo']),[urgency,setUrgency]=useState('standard');const rates={standard:1,fast:1.25,express:1.5};const total=Math.round((estimator[type].base+selected.reduce((s,id)=>s+(addons.find(a=>a.id===id)?.price||0),0))*rates[urgency]);const toggle=id=>setSelected(x=>x.includes(id)?x.filter(v=>v!==id):[...x,id]);return <div className="dash"><div className="dash-title"><div><span className="eyebrow">PROJECT PLANNER</span><h1>Cost Estimator</h1><p>Turn an initial idea into a transparent project starting point.</p></div><span className="tag">UGX / USD</span></div><div className="estimate-grid"><Glass className="estimate-form"><span className="eyebrow">01 • PRODUCT TYPE</span><div className="choice-grid">{Object.entries(estimator).map(([id,x])=><button className={type===id?'choice active':'choice'} onClick={()=>setType(id)} key={id}><b>{x.label}</b><small>From ${x.base}</small></button>)}</div><span className="eyebrow">02 • FEATURES</span><div className="checks">{addons.map(a=><button className={selected.includes(a.id)?'check active':'check'} onClick={()=>toggle(a.id)} key={a.id}><span>{selected.includes(a.id)?<Check size={13}/>:null}</span><b>{a.label}</b><small>+${a.price}</small></button>)}</div><span className="eyebrow">03 • DELIVERY</span><div className="choice-grid small">{[['standard','Standard'],['fast','Fast'],['express','Express']].map(([id,label])=><button className={urgency===id?'choice active':'choice'} onClick={()=>setUrgency(id)} key={id}><b>{label}</b><small>{id==='standard'?'Normal timeline':id==='fast'?'+25%':'+50%'}</small></button>)}</div></Glass><Glass className="estimate-total"><span className="eyebrow">ESTIMATED STARTING RANGE</span><strong>${total.toLocaleString()}</strong><b>UGX {(total*3700).toLocaleString()}</b><p>Final scope, integrations, infrastructure and delivery requirements are confirmed during discovery.</p><button className="btn primary">Request this build <ArrowRight size={16}/></button></Glass></div></div>}
 function AI(){
  const [messages,setMessages]=useState([{role:'ai',text:'I’m Vortex AI. I can help you explore products, shape a business idea into a project brief, or reason through a workflow.'}]);
  const [input,setInput]=useState('');
@@ -89,7 +73,7 @@ function App(){
  const [mode,setMode]=useState('site'),[view,setView]=useState('overview'),[menu,setMenu]=useState(false);
  const openOS=()=>{setMode('os');setView('overview');setMenu(false)},openAI=()=>{setMode('os');setView('ai');setMenu(false)};
  return <div className="app">
- {mode==='site'?<><header className="site-nav"><Brand/><nav><a href="#services">Solutions</a><a href="#ecosystem">Products</a><a href="#about">About</a><button onClick={openOS}>Vortex OS <ArrowRight size={14}/></button></nav><button className="menu" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></header>{menu&&<div className="mobile-nav"><a href="#services">Solutions</a><a href="#ecosystem">Products</a><button onClick={openOS}>Open Vortex OS</button></div>}<Marketing openOS={openOS} openAI={openAI}/><footer><Brand/><span>© 2026 Vortex Dynamics. Building from Uganda, for the world.</span><span><span className="dot"/> Systems ready</span></footer></>:<div className="os"><Sidebar view={view} setView={setView}/><div className="os-main"><header className="os-bar"><button onClick={()=>setMode('site')}><Globe2 size={16}/> Public site</button><span className="crumb">VORTEX OS / {view.toUpperCase()}</span><span className="network"><span className="dot"/> All systems operational</span></header>{view==='overview'?<Overview setView={setView}/>:view==='projects'?<Projects/>:view==='analytics'?<Analytics/>:view==='activity'?<ActivityPage/>:<AI/>}</div></div>}
+ {mode==='site'?<><header className="site-nav"><Brand/><nav><a href="#services">Solutions</a><a href="#ecosystem">Products</a><a href="#about">About</a><button onClick={openOS}>Vortex OS <ArrowRight size={14}/></button></nav><button className="menu" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></header>{menu&&<div className="mobile-nav"><a href="#services">Solutions</a><a href="#ecosystem">Products</a><button onClick={openOS}>Open Vortex OS</button></div>}<Marketing openOS={openOS} openAI={openAI}/><footer><Brand/><span>© 2026 Vortex Dynamics. Building from Uganda, for the world.</span><span><span className="dot"/> Systems ready</span></footer></>:<div className="os"><Sidebar view={view} setView={setView}/><div className="os-main"><header className="os-bar"><button onClick={()=>setMode('site')}><Globe2 size={16}/> Public site</button><span className="crumb">VORTEX OS / {view.toUpperCase()}</span><span className="network"><span className="dot"/> All systems operational</span></header>{view==='overview'?<Overview setView={setView}/>:view==='projects'?<Projects/>:view==='analytics'?<Analytics/>:view==='activity'?<ActivityPage/>:view==='estimator'?<Estimator/>:<AI/>}</div></div>}
  </div>
 }
 export default App;
