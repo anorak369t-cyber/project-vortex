@@ -1,7 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 const systemInstruction = `You are Vortex AI, the intelligent assistant for Vortex Dynamics.
 
 Your job is to give useful, accurate, honest answers. You can answer general questions, help with software and technology, and explain Vortex Dynamics and its products.
@@ -45,6 +43,13 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      res.status(503).json({ error: "Vortex AI is not configured. Add GEMINI_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy." });
+      return;
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const contents = Array.isArray(history)
       ? history.slice(-8).filter((item: any) => item && typeof item.text === "string" && item.text.trim()).map((item: any) => ({
           role: item.role === "model" ? "model" : "user",
@@ -58,7 +63,7 @@ export default async function handler(req: any, res: any) {
     });
 
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-3.7-flash",
+      model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
       contents,
       config: { systemInstruction }
     });
@@ -66,6 +71,7 @@ export default async function handler(req: any, res: any) {
     res.status(200).json({ text: response.text || "I couldn't generate a response." });
   } catch (error) {
     console.error("Vortex AI error:", error);
-    res.status(500).json({ error: "The Vortex AI service failed to respond." });
+    const message = error instanceof Error ? error.message : "Unknown Gemini API error";
+    res.status(502).json({ error: `Vortex AI could not complete the request: ${message.slice(0, 300)}` });
   }
 }
