@@ -45,39 +45,88 @@ export default async function handler(req: any, res: any) {
 
   const ai = new GoogleGenAI({ apiKey });
   const contents = Array.isArray(history)
-    ? history.slice(-8).filter((item: any) => item && typeof item.text === "string" && item.text.trim()).map((item: any) => ({
-        role: item.role === "model" ? "model" : "user",
-        parts: [{ text: item.text.trim().slice(0, 4000) }]
-      }))
+    ? history.slice(-8)
+        .filter((item: any) => item && typeof item.text === "string" && item.text.trim())
+        .map((item: any) => ({
+          role: item.role === "model" ? "model" : "user",
+          parts: [{ text: item.text.trim().slice(0, 4000) }]
+        }))
     : [];
 
   contents.push({ role: "user", parts: [{ text: message.trim().slice(0, 4000) }] });
 
+  // Google-only model routing. The primary model is configurable, with
+  // current stable Google fallbacks for transient capacity/rate-limit failures.
   const primaryModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-  const fallbackModels = [primaryModel, "gemini-3.7-flash", "gemini-3.5-flash-lite"].filter((model, index, list) => list.indexOf(model) === index);
+  const models = [primaryModel, "gemini-3.7-flash", "gemini-3.5-flash-lite"]
+    .filter((model, index, list) => list.indexOf(model) === index);
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const isTransient = (error: unknown) => {
     const text = error instanceof Error ? error.message : String(error);
-    return /503|UNAVAILABLE|high demand|overloaded|temporarily|deadline|429|RESOURCE_EXHAUSTED/i.test(text);
+    return /503|UNAVAILABLE|high demand|overloaded|temporarily|deadline|429|RESOURCE_EXHAUSTED|500|502|504/i.test(text);
   };
 
+  const friendlyError = (error: unknown) => {
+    const text = error instanceof Error ? error.message : String(error);
+    if (/429|RESOURCE_EXHAUSTED/i.test(text)) {
+      return "Vortex AI is receiving a high volume of requests right now. Please try again shortly.";
+    }
+    if (/503|UNAVAILABLE|high demand|overloaded|temporarily/i.test(text)) {
+      return "Vortex AI is temporarily busy. I tried the available Google AI routes, but they are currently at capacity. Please try again in a moment.";
+    }
+    if (/401|403|API key|authentication|permission/i.test(text)) {
+      return "Vortex AI needs a configuration check on the server. Please contact the administrator.";
+    }
+    return "Vortex AI couldn't complete that request. Please try again.";
+  };
+
+  // Stream the answer so the product feels alive instead of waiting for
+  // one large response. If a model fails before producing any tokens,
+  // retry and move to the next Google model.
+  res.statusCode = 200;
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+
+  let emitted = false;
   let lastError: unknown = null;
 
-  for (const model of fallbackModels) {
+  const sendEvent = (payload: Record<string, unknown>) => {
+    res.write(`data: ${JSON.stringify(payload)}\\n\\n`);
+  };
+
+  for (const model of models) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const response = await ai.models.generateContent({
+        const stream = await ai.models.generateContentStream({
           model,
           contents,
           config: { systemInstruction }
         });
 
-        res.status(200).json({ text: response.text || "I couldn't generate a response." });
+        for await (const chunk of stream) {
+          const text = chunk.text || "";
+          if (!text) continue;
+          emitted = true;
+          sendEvent({ type: "chunk", text });
+        }
+
+        sendEvent({ type: "done", model });
+        res.end();
         return;
       } catch (error) {
         lastError = error;
-        console.error(`Vortex AI error — model=${model}, attempt=${attempt + 1}`, error);
+        console.error(`Vortex AI stream error — model=${model}, attempt=${attempt + 1}`, error);
+
+        // Once tokens have reached the user, switching models mid-answer
+        // would corrupt the conversation, so finish with a clean message.
+        if (emitted) {
+          sendEvent({ type: "error", error: friendlyError(error) });
+          res.end();
+          return;
+        }
 
         if (!isTransient(error) || attempt === 1) break;
         await sleep(700 * Math.pow(2, attempt));
@@ -85,11 +134,6 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  const raw = lastError instanceof Error ? lastError.message : String(lastError);
-  if (/503|UNAVAILABLE|high demand|overloaded|429|RESOURCE_EXHAUSTED/i.test(raw)) {
-    res.status(503).json({ error: "Vortex AI is temporarily busy. I tried the available AI routes, but they are currently at capacity. Please try again in a moment." });
-    return;
-  }
-
-  res.status(502).json({ error: `Vortex AI could not complete the request: ${raw.slice(0, 240)}` });
+  sendEvent({ type: "error", error: friendlyError(lastError) });
+  res.end();
 }
