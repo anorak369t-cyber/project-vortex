@@ -94,7 +94,7 @@ export default async function handler(req: any, res: any) {
   let lastError: unknown = null;
 
   const sendEvent = (payload: Record<string, unknown>) => {
-    res.write(`data: ${JSON.stringify(payload)}\\n\\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
   for (const model of models) {
