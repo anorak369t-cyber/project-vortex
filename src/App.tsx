@@ -65,7 +65,24 @@ function Overview({setView}:{setView:(view:string)=>void}){
  </div>
 }
 
-function Projects(){return <div className="dash"><div className="dash-title"><div><span className="eyebrow">PRODUCT PORTFOLIO</span><h1>Projects</h1><p>Products and platforms moving through the Vortex pipeline.</p></div><button className="btn primary"><Zap size={16}/> New project</button></div><div className="project-grid os-projects">{projects.concat([{name:'Digital Records Hub',type:'Enterprise',status:'Discovery',description:'Institutional workflows'}]).map(({name,type,status,description},i)=><Glass className="project" key={name}><div className="project-top"><span>0{i+1}</span><b>{status}</b></div><div className="project-icon"><Layers3 size={21}/></div><h3>{name}</h3><p>{type} • {description}</p><div className="progress"><i style={{width:[78,64,51,37,22][i%5]+'%'}}/></div><small>Delivery progress</small></Glass>})}</div></div>}
+function Projects(){
+ const projectList=[...projects,{name:'Digital Records Hub',type:'Enterprise',status:'Discovery',description:'Institutional workflows'}];
+ return <div className="dash">
+  <div className="dash-title"><div><span className="eyebrow">PRODUCT PORTFOLIO</span><h1>Projects</h1><p>Products and platforms moving through the Vortex pipeline.</p></div><button className="btn primary"><Zap size={16}/> New project</button></div>
+  <div className="project-grid os-projects">
+   {projectList.map(({name,type,status,description},i)=>(
+    <Glass className="project" key={name}>
+     <div className="project-top"><span>0{i+1}</span><b>{status}</b></div>
+     <div className="project-icon"><Layers3 size={21}/></div>
+     <h3>{name}</h3>
+     <p>{type} • {description}</p>
+     <div className="progress"><i style={{width:[78,64,51,37,22][i%5]+'%'}}/></div>
+     <small>Delivery progress</small>
+    </Glass>
+   ))}
+  </div>
+ </div>
+}
 
 function Analytics(){return <div className="dash"><div className="dash-title"><div><span className="eyebrow">INTELLIGENCE</span><h1>Analytics</h1><p>Signals across products, workflows and digital infrastructure.</p></div></div><div className="analytics"><Glass className="wide"><div className="card-head"><div><small>WORKFLOW THROUGHPUT</small><h3>128 automated flows</h3></div><BarChart3 size={17}/></div><div className="big-chart">{[25,38,31,56,48,63,58,78,69,91,82,96].map((h,i)=><i key={i} style={{height:h+'%'}}/>)}</div></Glass><Glass className="insight"><Sparkles size={20}/><span className="eyebrow">AI INSIGHT</span><h3>Operations are becoming more connected.</h3><p>The unified Vortex architecture creates a foundation for shared analytics, automation and product intelligence.</p></Glass></div></div>}
 
