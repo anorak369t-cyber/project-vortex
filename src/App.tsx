@@ -23,11 +23,11 @@ function Marketing({openOS,openAI}:{openOS:()=>void;openAI:()=>void}){
     <div className="actions"><button className="btn primary" onClick={openOS}>Enter Vortex OS <ArrowRight size={16}/></button><button className="btn ghost" onClick={openAI}><Bot size={16}/> Talk to Vortex AI</button></div>
     <div className="proof"><span><Check size={14}/> Secure by design</span><span><Check size={14}/> AI-ready architecture</span><span><Check size={14}/> Built for scale</span></div>
    </div>
-   <div className="hero-visual"><div className="orbit a"/><div className="phone-glow"/><div className="phone-shell"><div className="phone-island"/><div className="phone-screen"><div className="phone-status"><span>9:41</span><span>● ●</span></div><div className="orbit b"/><Glass className="core-card">
+   <div className="hero-visual"><div className="orbit a"/><div className="orbit b"/><div className="phone-glow"/><div className="phone-shell"><div className="phone-island"/><div className="phone-screen"><div className="phone-status"><span>9:41</span><span>● ●</span></div><Glass className="core-card">
     <div className="card-head"><div><small>VORTEX CORE</small><h3>Digital command layer</h3></div><span className="live">LIVE</span></div>
     <div className="core"><div className="ring"><div className="core-icon"><Cpu size={28}/><small>AI</small></div></div></div>
     <div className="mini"><div><small>PROJECTS</small><b>24</b><span>+18%</span></div><div><small>UPTIME</small><b>99.9%</b><span>stable</span></div><div><small>WORKFLOWS</small><b>128</b><span>active</span></div></div>
-   </Glass></div>
+   </Glass></div></div></div>
   </section>
 
   <section className="section wrap" id="services"><div className="section-head"><div><span className="eyebrow">CAPABILITIES</span><h2>One technology partner. Multiple layers of impact.</h2></div><p>Design, engineering, AI and infrastructure brought into one coherent system.</p></div>
