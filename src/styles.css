@@ -196,3 +196,45 @@ footer{background:rgba(5,8,14,.45)!important;backdrop-filter:blur(20px);border-t
 @keyframes thinkingDots{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
 .ai-input input:disabled{opacity:.7}.ai-input button:disabled{opacity:.45;cursor:not-allowed}
 .ai-suggestions button:disabled{opacity:.4;cursor:not-allowed}
+
+
+/* Vortex AI: give the conversation the space it deserves. */
+.ai-product {
+  min-height: calc(100dvh - 24px);
+  height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+}
+.ai-product-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+.ai-phone-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.ai-chat-stream {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-bottom: 18px;
+}
+.ai-chat-intro { flex: 0 0 auto; }
+.ai-input { flex: 0 0 auto; position: sticky; bottom: 0; z-index: 2; }
+.ai-suggestions { flex: 0 0 auto; }
+.ai-phone-chat:has(.ai-chat-intro) .ai-chat-stream { flex: 0 1 auto; }
+.ai-phone-chat:not(:has(.ai-chat-intro)) .ai-chat-stream { flex: 1 1 auto; min-height: 0; }
+.ai-mode-switch { flex: 0 0 auto; }
+@media (max-width: 700px) {
+  .ai-product { height: calc(100dvh - 12px); min-height: calc(100dvh - 12px); }
+  .ai-product-stage { min-height: 0; }
+  .ai-phone-chat { min-height: 0; }
+  .ai-chat-stream { padding-inline: 4px; }
+  .ai-input { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+}
