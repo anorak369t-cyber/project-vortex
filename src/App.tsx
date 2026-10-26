@@ -191,7 +191,7 @@ function AI(){
    <div className="ai-product-top"><button className="ai-back" onClick={()=>setFocus('chat')}><ChevronRight size={18}/></button><div className="ai-title"><b>Vortex AI</b><small><span className={'dot '+(thinking?'thinking-dot':'')}/>{thinking?'Thinking…':'Ready to help'}</small></div><button className="ai-plus">✦</button></div>
    <div className="ai-product-stage">
     {focus==='chat'?<div className="ai-phone-chat">
-      <div className="ai-chat-intro"><div className={'ai-orb '+(thinking?'orb-thinking':'')}><Sparkles size={25}/></div><span className="eyebrow">VORTEX AI</span><h1>What can I help<br/>you <em>create?</em></h1><p>Ideas, products, workflows and answers — in one conversation.</p></div>
+      {messages.length <= 1 && <div className="ai-chat-intro"><div className={'ai-orb '+(thinking?'orb-thinking':'')}><Sparkles size={25}/></div><span className="eyebrow">VORTEX AI</span><h1>What can I help<br/>you <em>create?</em></h1><p>Ideas, products, workflows and answers — in one conversation.</p></div>}
       <div className="ai-chat-stream">
        {messages.slice(-4).map((m,i)=><div className={'ai-bubble '+m.role} key={i}><span className="ai-bubble-icon">{m.role==='ai'?<Sparkles size={12}/>:<Users size={12}/>}</span><p>{m.text||' '}</p></div>)}
        {thinking&&<div className="ai-bubble ai thinking-bubble"><span className="ai-bubble-icon"><Sparkles size={12}/></span><p className="thinking-text"><span/> <span/> <span/> <b>Thinking</b></p></div>}
