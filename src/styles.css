@@ -238,3 +238,20 @@ footer{background:rgba(5,8,14,.45)!important;backdrop-filter:blur(20px);border-t
   .ai-chat-stream { padding-inline: 4px; }
   .ai-input { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 }
+
+
+/* Keep the Vortex AI message composer compact instead of stretching edge to edge. */
+.ai-input {
+  width: min(760px, calc(100% - 36px));
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+@media (max-width: 560px) {
+  .ai-input {
+    width: calc(100% - 24px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+}
